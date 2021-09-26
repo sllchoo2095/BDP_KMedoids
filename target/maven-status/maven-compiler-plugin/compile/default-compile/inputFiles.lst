@@ -1,0 +1,7 @@
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/model/DataPoint.java
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/Task3Test/KMedoidsMapper.java
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/distance/EuclidianDistance.java
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/Task3Test/KMedoidsClusteringJob.java
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/distance/DistanceMeasure.java
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/Task3Test/KMedoidsReducer.java
+/Users/stephaniechoo/Documents/BigData2021/Task3Test/src/main/java/edu/rmit/cosc2367/s3846487/model/Medoid.java
