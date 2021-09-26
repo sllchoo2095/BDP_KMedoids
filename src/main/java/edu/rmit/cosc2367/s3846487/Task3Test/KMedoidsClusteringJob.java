@@ -67,15 +67,14 @@ public class KMedoidsClusteringJob {
 		int iteration = 1;
 		Configuration conf = new Configuration();
 		conf.set("num.iteration", iteration + "");
-		
-		//Path PointDataPath = new Path("clustering/data.seq");
-		Path inputDataPath = new Path(args[0]); //new arguement for the input data. 
+	
+		Path inputDataPath = new Path(args[0]); //new arguement for the input path 
 		Path centroidDataPath = new Path("clustering/centroid.seq");
 		conf.set("centroid.path", centroidDataPath.toString());
-		Path outputDir = new Path(args[1]+"/clustering/depth_1");//Explicitly state output directory 
+		Path outputDir = new Path(args[1]+"/clustering/depth_1");//Explicitly state output directory of first iteration 
 		int clusterNum = Integer.parseInt(args[2]); //number of cluster or k value 
 		
-		LOG.info("INPUT DATA PATH = "+ inputDataPath);
+	
 		
 
 		Job job = Job.getInstance(conf);
@@ -87,37 +86,22 @@ public class KMedoidsClusteringJob {
 
 		FileInputFormat.addInputPath(job, inputDataPath);
 		FileSystem fs = FileSystem.get(conf);
-//		if (fs.exists(outputDir)) {
-//			fs.delete(outputDir, true);//comment out for assignment input, 
-//		}
+
 
 		if (fs.exists(centroidDataPath)) {
 			fs.delete(centroidDataPath, true);
 		}
 
-//		if (fs.exists(PointDataPath)) {
-//			fs.delete(PointDataPath, true);//comment out for assignment inout 
-//		}
-
-		generateCentroid(conf, centroidDataPath, fs, clusterNum);
-		//generateDataPoints(conf, PointDataPath, fs, inputDataPath);
+		generateMedoid(conf, centroidDataPath, fs, clusterNum);
 
 		job.setNumReduceTasks(1);
+		
 		FileOutputFormat.setOutputPath(job, outputDir);
-		LOG.info("OUTPUT DATA PATH = "+ outputDir );
-		//job.setInputFormatClass(SequenceFileInputFormat.class);
-		//job.setOutputFormatClass(SequenceFileOutputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
 		job.setMapOutputKeyClass(Medoid.class);
 		job.setMapOutputValueClass(DataPoint.class);
-
 		job.setOutputKeyClass(Medoid.class);
 		job.setOutputValueClass(DataPoint.class);
-	
-		
-//		job.setInputFormatClass(TextInputFormat.class);
-//		job.setOutputFormatClass(TextOutputFormat.class);
-
 		job.waitForCompletion(true);
 
 		long counter = job.getCounters().findCounter(KMedoidsReducer.Counter.CONVERGED).getValue();
@@ -128,62 +112,35 @@ public class KMedoidsClusteringJob {
 			conf.set("num.iteration", iteration + "");
 			job = Job.getInstance(conf);
 			job.setJobName("KMedoids Clustering = " + iteration);
-			//job.set
+			
 			job.setMapperClass(KMedoidsMapper.class);
 			job.setMapOutputKeyClass(Medoid.class);
 			job.setMapOutputValueClass(DataPoint.class);
 			job.setReducerClass(KMedoidsReducer.class);
 			job.setJarByClass(KMedoidsMapper.class);
 
-			//PointDataPath = new Path(args[1]+"clustering/depth_" + (iteration - 1) + "/");
+			
 			outputDir = new Path(args[1]+"/clustering/depth_" + iteration); //arg[1]
-			//outputDir = new Path(args[1]+"clustering/depth_" + iteration);
+		
 
 			FileInputFormat.addInputPath(job, inputDataPath);
 			if (fs.exists(outputDir))
 				fs.delete(outputDir, true);
 
 			FileOutputFormat.setOutputPath(job, outputDir);
-//			job.setInputFormatClass(SequenceFileInputFormat.class);
-//			job.setOutputFormatClass(SequenceFileOutputFormat.class);
-//			job.setInputFormatClass(TextInputFormat.class);
-			job.setOutputFormatClass(TextOutputFormat.class);
-			
-			
 
-//			job.setOutputKeyClass(Medoid.class);
-//			job.setOutputValueClass(DataPoint.class);
+			job.setOutputFormatClass(TextOutputFormat.class);
 			job.setMapOutputKeyClass(Medoid.class);
 			job.setMapOutputValueClass(DataPoint.class);
-			//job.setOutputKeyClass(Text.class);
-			
-			//job.setOutputValueClass(Text.class);
 			job.setNumReduceTasks(1);
-
 			job.waitForCompletion(true);
 			iteration++;
+			
+			//step 4 start
 			counter = job.getCounters().findCounter(KMedoidsReducer.Counter.CONVERGED).getValue();
+			//step 4 end
 		}
 
-//		Path result = new Path("clustering/depth_" + (iteration - 1) + "/");
-//		LOG.info("PATH RESULTS ===> "+ result);
-//
-//		FileStatus[] stati = fs.listStatus(result);
-//		for (FileStatus status : stati) {
-//			if (!status.isDir()) {
-//				Path path = status.getPath();
-//				if (!path.getName().equals("_SUCCESS")) {
-//					LOG.info("FOUND " + path.toString());
-//					try (SequenceFile.Reader reader = new SequenceFile.Reader(fs, path, conf)) {
-//						Medoid key = new Medoid();
-//						DataPoint v = new DataPoint();
-//						while (reader.next(key, v)) {
-//							LOG.info(key + " / " + v);
-//						}
-//					}
-//				}
-//			}
-//		}
 	}
 	
 	
@@ -192,8 +149,8 @@ public class KMedoidsClusteringJob {
 		try (SequenceFile.Writer dataWriter = SequenceFile.createWriter(fs, conf, in, Medoid.class,
 				DataPoint.class)) {
 		
-			try(FSDataInputStream inputStream = fs.open(inputDataPath)){
-				BufferedReader br = new BufferedReader(new InputStreamReader(inputStream)); 
+			try(FSDataInputStream input = fs.open(inputDataPath)){
+				BufferedReader br = new BufferedReader(new InputStreamReader(input)); 
 				
 				String str; 
 				
@@ -205,20 +162,22 @@ public class KMedoidsClusteringJob {
 				}
 				
 				br.close();
-				inputStream.close();
+				input.close();
 
 				
 			}
 		}
 	}//generateDataPoints
 	
+	
+	//Step 1 start
 	@SuppressWarnings("deprecation")
-	public static void generateCentroid(Configuration conf, Path center, FileSystem fs, int clusterNum) throws IOException {
+	public static void generateMedoid(Configuration conf, Path center, FileSystem fs, int clusterNum) throws IOException {
 		final Logger LOG = Logger.getLogger(KMedoidsClusteringJob.class);
 		
 		try (SequenceFile.Writer medoidWriter = SequenceFile.createWriter(fs, conf, center, Medoid.class,
 				IntWritable.class)) {
-			final IntWritable value = new IntWritable(0);
+			final IntWritable zero = new IntWritable(0);
 			
 			DataPoint kNum [] = {
 					new DataPoint(-73.981636047363281,40.732769012451172),//line 100 -73.981636047363281 40.732769012451172
@@ -231,9 +190,9 @@ public class KMedoidsClusteringJob {
 			
 			for (int i =0; i<clusterNum; i++) {
 				
-				LOG.info("Adding = "+ kNum[i]);
+				LOG.info("Adding Medoid = "+ kNum[i]);
 				
-				medoidWriter.append(new Medoid(kNum[i]), value);
+				medoidWriter.append(new Medoid(kNum[i]), zero);
 				
 				
 			}
@@ -241,31 +200,8 @@ public class KMedoidsClusteringJob {
 			
 		}
 	}//GenerateCentroid
+	
+	//Step 1 end 
 
-//	@SuppressWarnings("deprecation")
-//	public static void generateDataPoints(Configuration conf, Path in, FileSystem fs) throws IOException {
-//		try (SequenceFile.Writer dataWriter = SequenceFile.createWriter(fs, conf, in, Medoid.class,
-//				DataPoint.class)) {
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(1, 2));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(16, 3));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(3, 3));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(2, 2));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(2, 3));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(25, 1));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(7, 6));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(6, 5));
-//			dataWriter.append(new Medoid(new DataPoint(0, 0)), new DataPoint(-1, -23));
-//		}
-//	}
-//
-//	@SuppressWarnings("deprecation")
-//	public static void generateCentroid(Configuration conf, Path center, FileSystem fs) throws IOException {
-//		try (SequenceFile.Writer centerWriter = SequenceFile.createWriter(fs, conf, center, Medoid.class,
-//				IntWritable.class)) {
-//			final IntWritable value = new IntWritable(0);
-//			centerWriter.append(new Medoid(new DataPoint(1, 1)), value);
-//			centerWriter.append(new Medoid(new DataPoint(5, 5)), value);
-//		}
-//	}
 
 }

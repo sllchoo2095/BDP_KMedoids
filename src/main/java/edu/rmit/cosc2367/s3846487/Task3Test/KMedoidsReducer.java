@@ -27,7 +27,7 @@ import edu.rmit.cosc2367.s3846487.model.DataPoint;
 import de.jungblut.math.DoubleVector;
 
 /**
- * calculate a new centroid for these vertices
+ * calculate a new Medoid for these vertices
  */
 public class KMedoidsReducer extends Reducer<Medoid, DataPoint, Medoid, DataPoint> {
 	
@@ -61,20 +61,21 @@ public class KMedoidsReducer extends Reducer<Medoid, DataPoint, Medoid, DataPoin
 		double nearestDistance = Double.MAX_VALUE;
 		
 		LOG.setLevel(Level.DEBUG);
-		// This is for calculating the distance between a point and another (centroid is essentially a point).
+		
 		distanceMeasurer = new EuclidianDistance();
 
 		List<DataPoint> pointsVectors = new ArrayList<>();
 		
 		
-		//Compute Current centroid
+		//Compute Current Medoid
 		
 		LOG.debug(" Mapper Input Current Medoid = "+ medoid + " cluster index = " + medoid.getClusterIndex() );
 		
 		Medoid currMedoid = new Medoid(medoid); 
 		
+		//Add all of the possible distances between current medoid and each of the data points in the cluster
 		for (DataPoint dataValue : dataPoints) {
-			LOG.debug(" dataValue added = "+ dataValue.toString() );
+			
 			pointsVectors.add(new DataPoint(dataValue)); 
 			totalDistance += distanceMeasurer.measureDistance(currMedoid.getCenterVector(), dataValue.getVector()); 
 		}
@@ -82,7 +83,8 @@ public class KMedoidsReducer extends Reducer<Medoid, DataPoint, Medoid, DataPoin
 		//Calcualte the congfiguration cost 
 		double currMedoidCost = totalDistance/ pointsVectors.size(); 
 		
-		//Calculate the distance between all of the data points
+		//Calculate the distance between all of the data points between each other in the cluster. 
+		//
 		
 		for(int i =0; i<pointsVectors.size(); i++) {
 			
@@ -91,8 +93,6 @@ public class KMedoidsReducer extends Reducer<Medoid, DataPoint, Medoid, DataPoin
 			for(int j =0 ; j<pointsVectors.size(); j++  ) {
 				
 				
-					LOG.debug( "index i = "+ i + " index j = "+j); 
-					LOG.debug(" pointsVectors.get(i).getVector() == "+ pointsVectors.get(i).getVector() + " pointsVectors.get(j).getVector() == "+ pointsVectors.get(j).getVector());
 					double dist = distanceMeasurer.measureDistance(pointsVectors.get(i).getVector(),pointsVectors.get(j).getVector());
 					sumData += dist; 
 					
@@ -106,32 +106,30 @@ public class KMedoidsReducer extends Reducer<Medoid, DataPoint, Medoid, DataPoin
 					currMedoidCost = costNewDataPoint; 
 				
 			}
-				LOG.debug("FINALISED currMedoid ***> "+ currMedoid);
+				
 		}
 		
-		LOG.debug("FINALISED currMedoid ***> "+ currMedoid);
 		
-		
-		centers.add(currMedoid);
-		
-		
+		centers.add(currMedoid);		
 
 		// write new key-value pairs to disk, which will be fed into next round mapReduce job.
 		for (DataPoint vector :pointsVectors) {
-			
-			
-			LOG.debug("OUTPUT VECOTOR &&&>>> "+ vector.toString());
-			LOG.debug("OUTPUT MEDOID "+currMedoid.toString());
+
 			context.write(currMedoid, vector);
 		}
+		//Step 3 end
 
-		// check if all centroids are converged.
+		// check if all medoids are converged.
 		// If all of them are converged, the counter would be zero.
 		// If one or more of them are not, the counter would be greater than zero.
+		
+		//step 4
 		if (currMedoid.update(medoid))
 			context.getCounter(Counter.CONVERGED).increment(1);
 
 	}
+	
+	
 
 	/**
 	 * Write the recomputed centroids to disk.
