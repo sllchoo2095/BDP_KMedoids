@@ -12,4 +12,4 @@ hadoop jar NAME_BDP_A2_Task3-0.0.1-SNAPSHOT.jar edu.rmit.cosc2367.NAME.NAME_BDP_
 
 The Java code outputs stringing coordinates. 
 
-The python code was used to clean the output of the 
+The python code was used to clean the output of the Java Code and map it to a map to visualise the clusters
